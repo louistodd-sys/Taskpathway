@@ -1,9 +1,13 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import LandingPage from './(marketing)/page'
-import MarketingLayout from './(marketing)/layout'
+import LandingPage from '@/components/marketing/LandingPage'
+import MarketingLayout from '@/components/marketing/MarketingLayout'
 
-export { metadata } from './(marketing)/page'
+export const metadata: Metadata = {
+  title: 'TaskPathway — SOP & Work Instruction Software for Teams',
+  description: 'Create, manage, and execute standard operating procedures and work instructions with TaskPathway. Role-based approval flows, version control, and an interactive step-by-step viewer built for manufacturing and operations teams.',
+}
 
 export default async function Home() {
   const supabase = createClient()
