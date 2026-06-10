@@ -16,8 +16,9 @@ export default async function EditPage({ params }: { params: { id: string } }) {
 
   if (!membership) redirect('/register')
 
-  const canEdit = ['owner', 'admin', 'author'].includes(membership.app_role)
-  if (!canEdit) redirect('/library')
+  // Reviewers and admins can view in edit mode to approve/reject
+  const allowedRoles = ['owner', 'admin', 'author', 'reviewer']
+  if (!allowedRoles.includes(membership.app_role)) redirect('/library')
 
   const { data: task } = await supabase
     .from('documents')
@@ -39,6 +40,7 @@ export default async function EditPage({ params }: { params: { id: string } }) {
       <TaskEditor
         companyId={membership.company_id}
         userId={user.id}
+        userRole={membership.app_role}
         task={task}
         steps={steps ?? []}
       />
