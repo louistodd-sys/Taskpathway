@@ -63,6 +63,7 @@ export interface Document {
   id: string
   company_id: string
   department_id: string | null
+  department: string | null
   folder_id: string | null
   document_code: string | null
   title: string
@@ -92,6 +93,7 @@ export interface Document {
 export interface TaskFormData {
   title: string
   document_type: DocumentType
+  department: string
   critical_safety_info: string
   estimated_time: string
   required_tools: string[]

@@ -45,6 +45,7 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
   const [form, setForm] = useState<TaskFormData>({
     title: task?.title ?? '',
     document_type: task?.document_type ?? 'Task',
+    department: task?.department ?? '',
     critical_safety_info: task?.critical_safety_info ?? '',
     estimated_time: task?.estimated_time ?? '',
     required_tools: task?.required_tools ?? [],
@@ -99,6 +100,7 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
       owner_user_id: userId,
       title: form.title.trim(),
       document_type: form.document_type,
+      department: form.department || null,
       critical_safety_info: form.critical_safety_info || null,
       estimated_time: form.estimated_time || null,
       required_tools: form.required_tools,
@@ -329,6 +331,16 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
             value={form.title}
             onChange={e => setField('title', e.target.value)}
             placeholder="e.g. Machine start-up procedure"
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Department (optional)</label>
+          <input
+            value={form.department}
+            onChange={e => setField('department', e.target.value)}
+            placeholder="e.g. Production, Maintenance, Quality"
             className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>

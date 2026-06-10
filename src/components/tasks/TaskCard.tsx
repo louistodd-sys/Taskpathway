@@ -1,31 +1,53 @@
+'use client'
+
 import Link from 'next/link'
-import { Clock, Play, Pencil, ChevronRight } from 'lucide-react'
+import { Clock, Play, Pencil, Star } from 'lucide-react'
 import { formatDate, STATUS_COLORS } from '@/lib/utils'
 import type { Document } from '@/lib/types'
 
 interface TaskCardProps {
   task: Document
   canEdit: boolean
+  isFavourite?: boolean
+  onToggleFavourite?: (id: string) => void
 }
 
-export default function TaskCard({ task, canEdit }: TaskCardProps) {
+export default function TaskCard({ task, canEdit, isFavourite = false, onToggleFavourite }: TaskCardProps) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 hover:border-indigo-200 hover:shadow-sm transition-all group">
       <div className="flex items-start justify-between gap-3 mb-3">
         <h3 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2 flex-1">
           {task.title}
         </h3>
-        <span
-          className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[task.status] ?? 'bg-gray-100 text-gray-600'}`}
-        >
-          {task.status}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {onToggleFavourite && (
+            <button
+              onClick={() => onToggleFavourite(task.id)}
+              className="p-1 rounded hover:bg-amber-50 transition-colors"
+              title={isFavourite ? 'Remove from favourites' : 'Add to favourites'}
+            >
+              <Star
+                className={`w-4 h-4 transition-colors ${isFavourite ? 'fill-amber-400 text-amber-400' : 'text-gray-300 hover:text-amber-400'}`}
+              />
+            </button>
+          )}
+          <span
+            className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLORS[task.status] ?? 'bg-gray-100 text-gray-600'}`}
+          >
+            {task.status}
+          </span>
+        </div>
       </div>
 
-      <div className="flex items-center gap-3 text-xs text-gray-400 mb-4">
+      <div className="flex items-center flex-wrap gap-2 text-xs text-gray-400 mb-3">
         <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium">
           {task.document_type}
         </span>
+        {task.department && (
+          <span className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-medium">
+            {task.department}
+          </span>
+        )}
         <span>v{task.current_version_number}</span>
         {task.estimated_time && (
           <span className="flex items-center gap-1">
