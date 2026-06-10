@@ -121,6 +121,7 @@ export default function LibraryPage() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Task Library</h1>
@@ -137,6 +138,7 @@ export default function LibraryPage() {
         )}
       </div>
 
+      {/* Stats bar */}
       {!isViewer && (
         <div className="grid grid-cols-5 gap-3 mb-6">
           {[
@@ -161,6 +163,7 @@ export default function LibraryPage() {
         </div>
       )}
 
+      {/* Viewer favourites bar (simplified) */}
       {isViewer && stats.favourites > 0 && (
         <div className="mb-4">
           <button
@@ -173,6 +176,7 @@ export default function LibraryPage() {
         </div>
       )}
 
+      {/* Search + filters */}
       <div className="flex flex-wrap gap-3 mb-6">
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -223,6 +227,7 @@ export default function LibraryPage() {
         )}
       </div>
 
+      {/* Task grid */}
       {!filtered.length ? (
         <div className="text-center py-24">
           <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mx-auto mb-4">
