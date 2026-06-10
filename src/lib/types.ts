@@ -41,6 +41,14 @@ export interface Annotation {
   text: string
 }
 
+export interface VideoCaption {
+  id: string
+  time: number
+  duration: number
+  text: string
+  position: { x: number; y: number }
+}
+
 export interface Step {
   id: string
   company_id: string
@@ -55,6 +63,7 @@ export interface Step {
   requires_acknowledgement: boolean
   sort_order: number
   annotations: Annotation[]
+  video_captions: VideoCaption[]
   created_at: string
   updated_at: string
 }
@@ -73,6 +82,8 @@ export interface Document {
   critical_safety_info: string | null
   estimated_time: string | null
   required_tools: string[]
+  applicable_machines: string[]
+  notification_emails: string[]
   owner_user_id: string | null
   reviewer_user_id: string | null
   approver_user_id: string | null
@@ -110,6 +121,7 @@ export interface StepFormData {
   requires_acknowledgement: boolean
   sort_order: number
   annotations: Annotation[]
+  video_captions: VideoCaption[]
 }
 
 export interface AuditLogEntry {
