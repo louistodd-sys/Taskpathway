@@ -91,6 +91,7 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
     const prevStepCount = initialSteps?.length ?? 0
     const newStatus = options.statusOverride ?? form.status
 
+    // Increment version when approving
     const newVersion = newStatus === 'Approved' && prevStatus !== 'Approved'
       ? String(parseInt(prevVersion) + 1)
       : prevVersion
@@ -130,6 +131,7 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
       documentId = data.id
     }
 
+    // Upsert steps
     const existingIds = new Set(initialSteps?.map(s => s.id) ?? [])
     const formIds = new Set(steps.filter(s => !s.id.startsWith('new-')).map(s => s.id))
     const toDelete = [...existingIds].filter(id => !formIds.has(id))
@@ -154,6 +156,7 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
       await supabase.from('steps').upsert(stepRows)
     }
 
+    // Audit log
     const stepDelta = steps.length - prevStepCount
     let actionType = 'Updated'
     let summary = `"${form.title}" updated`
@@ -206,6 +209,7 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
 
   return (
     <div className="max-w-3xl mx-auto">
+      {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <button
           onClick={() => router.push('/library')}
@@ -227,7 +231,9 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
           )}
         </div>
 
+        {/* Action buttons — role-gated */}
         <div className="flex items-center gap-2 flex-wrap justify-end">
+          {/* Always show save draft for authors on non-approved tasks */}
           {canAuthor && task?.status !== 'Approved' && (
             <button
               onClick={() => handleSave()}
@@ -239,6 +245,7 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
             </button>
           )}
 
+          {/* Submit for review — authors on draft/rejected tasks */}
           {canAuthor && !canApprove && (task?.status === 'Draft' || task?.status === 'Rejected' || !isEdit) && (
             <button
               onClick={handleSubmitForReview}
@@ -250,6 +257,7 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
             </button>
           )}
 
+          {/* Approve/Reject — owners and admins on In Review tasks */}
           {canApprove && task?.status === 'In Review' && (
             <>
               <button
@@ -271,6 +279,7 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
             </>
           )}
 
+          {/* Admins can publish directly (on draft/rejected) */}
           {canApprove && (task?.status === 'Draft' || task?.status === 'Rejected' || !isEdit) && (
             <button
               onClick={() => handleSave({ statusOverride: 'Approved', reviewedAt: new Date().toISOString() })}
@@ -284,6 +293,7 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
         </div>
       </div>
 
+      {/* Reject note input */}
       {showRejectInput && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
           <p className="text-sm font-medium text-red-800 mb-2">Reason for rejection</p>
@@ -307,6 +317,7 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
         </div>
       )}
 
+      {/* Reviewer note on rejected tasks */}
       {task?.status === 'Rejected' && task.reviewer_note && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
           <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-1">Rejection feedback</p>
@@ -320,6 +331,7 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
         </div>
       )}
 
+      {/* Task metadata */}
       <div className={`bg-white rounded-xl border border-gray-200 p-6 mb-6 space-y-5 ${isReadOnly ? 'opacity-75 pointer-events-none' : ''}`}>
         <h2 className="font-semibold text-gray-900">Task details</h2>
 
@@ -415,6 +427,7 @@ export default function TaskEditor({ companyId, userId, userRole, task, steps: i
         </div>
       </div>
 
+      {/* Steps */}
       <div className={`bg-white rounded-xl border border-gray-200 p-6 ${isReadOnly ? 'opacity-75 pointer-events-none' : ''}`}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-semibold text-gray-900">Steps</h2>
