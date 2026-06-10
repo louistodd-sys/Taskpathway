@@ -21,7 +21,11 @@ export default async function CreatePage() {
 
   return (
     <div className="p-8">
-      <TaskEditor companyId={membership.company_id} userId={user.id} />
+      <TaskEditor
+        companyId={membership.company_id}
+        userId={user.id}
+        userRole={membership.app_role}
+      />
     </div>
   )
 }
