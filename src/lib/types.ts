@@ -71,8 +71,14 @@ export interface Document {
   required_tools: string[]
   owner_user_id: string | null
   reviewer_user_id: string | null
+  approver_user_id: string | null
   status: DocumentStatus
   current_version_number: string
+  reviewer_note: string | null
+  reviewed_at: string | null
+  submitted_at: string | null
+  effective_date: string | null
+  review_due_date: string | null
   tags: string[] | null
   active: boolean
   created_at: string
@@ -99,4 +105,28 @@ export interface StepFormData {
   requires_acknowledgement: boolean
   sort_order: number
   annotations: Annotation[]
+}
+
+export interface AuditLogEntry {
+  id: string
+  company_id: string
+  user_id: string | null
+  entity: string
+  entity_id: string | null
+  action_type: string
+  summary: string
+  created_at: string
+}
+
+export interface TpInvitation {
+  id: string
+  company_id: string
+  email: string
+  app_role: AppRole
+  token: string
+  accepted: boolean
+  invited_by: string | null
+  invited_by_name: string | null
+  expires_at: string
+  created_at: string
 }
