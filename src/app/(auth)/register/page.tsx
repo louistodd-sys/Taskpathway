@@ -22,14 +22,19 @@ export default function RegisterPage() {
     setError('')
     setLoading(true)
 
-    const { error } = await supabase.auth.signUp({
+    const { error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { full_name: fullName } },
     })
 
+    if (signUpError) { setError(signUpError.message); setLoading(false); return }
+
+    // Establish a real session immediately (signUp alone may not if email confirm is on)
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    if (signInError) { setError(signInError.message); setLoading(false); return }
+
     setLoading(false)
-    if (error) { setError(error.message); return }
     setStep('company')
   }
 
@@ -39,7 +44,7 @@ export default function RegisterPage() {
     setLoading(true)
 
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('Session lost. Please try again.'); setLoading(false); return }
+    if (!user) { setError('Session lost. Please sign in again.'); setLoading(false); return }
 
     const slug = companyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
 
@@ -53,7 +58,14 @@ export default function RegisterPage() {
 
     const { error: memberError } = await supabase
       .from('memberships')
-      .insert({ company_id: company.id, user_id: user.id, app_role: 'owner' })
+      .insert({
+        company_id: company.id,
+        user_id: user.id,
+        app_role: 'owner',
+        active: true,
+        user_email: email,
+        user_name: fullName,
+      })
 
     if (memberError) { setError(memberError.message); setLoading(false); return }
 

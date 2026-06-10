@@ -14,7 +14,7 @@ export default function AcceptInvitePage() {
   const [invitation, setInvitation] = useState<{ email: string; app_role: string; company_id: string; accepted: boolean; expires_at: string } | null>(null)
   const [loadingInvite, setLoadingInvite] = useState(true)
   const [invalid, setInvalid] = useState(false)
-  const [step, setStep] = useState<'loading' | 'register' | 'login' | 'done'>('loading')
+  const [step, setStep] = useState<'loading' | 'register' | 'done'>('loading')
 
   const [fullName, setFullName] = useState('')
   const [password, setPassword] = useState('')
@@ -46,15 +46,20 @@ export default function AcceptInvitePage() {
     setSubmitting(true)
     setError('')
 
-    const { data: authData, error: signUpError } = await supabase.auth.signUp({
+    const { error: signUpError } = await supabase.auth.signUp({
       email: invitation.email,
       password,
       options: { data: { full_name: fullName } },
     })
 
     if (signUpError) {
+      // May already have an account — try signing in
       const { error: signInError } = await supabase.auth.signInWithPassword({ email: invitation.email, password })
       if (signInError) { setError(signUpError.message); setSubmitting(false); return }
+    } else {
+      // Establish session immediately
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: invitation.email, password })
+      if (signInError) { setError(signInError.message); setSubmitting(false); return }
     }
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -62,7 +67,14 @@ export default function AcceptInvitePage() {
 
     const { error: memberError } = await supabase
       .from('memberships')
-      .upsert({ company_id: invitation.company_id, user_id: user.id, app_role: invitation.app_role, active: true })
+      .upsert({
+        company_id: invitation.company_id,
+        user_id: user.id,
+        app_role: invitation.app_role,
+        active: true,
+        user_email: invitation.email,
+        user_name: fullName,
+      })
 
     if (memberError) { setError(memberError.message); setSubmitting(false); return }
 

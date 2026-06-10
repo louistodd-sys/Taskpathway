@@ -28,6 +28,9 @@ export interface Membership {
   user_id: string
   app_role: AppRole
   active: boolean
+  user_email: string | null
+  user_name: string | null
+  created_at?: string
   companies?: Company
 }
 
