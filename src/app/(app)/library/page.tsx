@@ -1,80 +1,170 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+'use client'
+
+import { useEffect, useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Plus, Search } from 'lucide-react'
+import {
+  Plus, Search, FileText, CheckCircle, Clock, AlertCircle, X
+} from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import TaskCard from '@/components/tasks/TaskCard'
+import type { Document, Membership } from '@/lib/types'
 
 const AUTHOR_ROLES = ['owner', 'admin', 'author']
 
-export default async function LibraryPage() {
+type StatusFilter = 'all' | 'Draft' | 'In Review' | 'Approved' | 'Rejected' | 'Archived'
+type TypeFilter = 'all' | 'Task' | 'Work Instruction'
+
+export default function LibraryPage() {
+  const router = useRouter()
   const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
 
-  const { data: membership } = await supabase
-    .from('memberships')
-    .select('company_id, app_role')
-    .eq('user_id', user.id)
-    .eq('active', true)
-    .single()
+  const [tasks, setTasks] = useState<Document[]>([])
+  const [membership, setMembership] = useState<Membership | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
 
-  if (!membership) redirect('/register')
+  useEffect(() => {
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/login'); return }
 
-  const { data: tasks } = await supabase
-    .from('documents')
-    .select('*')
-    .eq('company_id', membership.company_id)
-    .eq('active', true)
-    .order('updated_at', { ascending: false })
+      const { data: mem } = await supabase
+        .from('memberships')
+        .select('*, companies(*)')
+        .eq('user_id', user.id)
+        .eq('active', true)
+        .single()
 
-  const canCreate = AUTHOR_ROLES.includes(membership.app_role)
+      if (!mem) { router.push('/register'); return }
+      setMembership(mem)
+
+      const isViewer = mem.app_role === 'viewer'
+      let query = supabase
+        .from('documents')
+        .select('*')
+        .eq('company_id', mem.company_id)
+        .eq('active', true)
+        .order('updated_at', { ascending: false })
+
+      if (isViewer) {
+        query = query.eq('status', 'Approved')
+      }
+
+      const { data } = await query
+      setTasks(data ?? [])
+      setLoading(false)
+    }
+    load()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const filtered = useMemo(() => {
+    return tasks.filter(t => {
+      const matchSearch = !search ||
+        t.title.toLowerCase().includes(search.toLowerCase()) ||
+        t.document_type.toLowerCase().includes(search.toLowerCase())
+      const matchStatus = statusFilter === 'all' || t.status === statusFilter
+      const matchType = typeFilter === 'all' || t.document_type === typeFilter
+      return matchSearch && matchStatus && matchType
+    })
+  }, [tasks, search, statusFilter, typeFilter])
+
+  const stats = useMemo(() => ({
+    total: tasks.length,
+    draft: tasks.filter(t => t.status === 'Draft').length,
+    inReview: tasks.filter(t => t.status === 'In Review').length,
+    approved: tasks.filter(t => t.status === 'Approved').length,
+  }), [tasks])
+
+  const canCreate = AUTHOR_ROLES.includes(membership?.app_role ?? '')
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Task Library</h1>
-          <p className="text-gray-400 mt-1 text-sm">{tasks?.length ?? 0} tasks</p>
+          <p className="text-gray-400 mt-0.5 text-sm">{filtered.length} of {tasks.length} tasks</p>
         </div>
         {canCreate && (
-          <Link
-            href="/create"
-            className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm"
-          >
+          <Link href="/create" className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors shadow-sm">
             <Plus className="w-4 h-4" />
             Create Task
           </Link>
         )}
       </div>
 
-      {!tasks?.length ? (
+      {membership?.app_role !== 'viewer' && (
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          {[
+            { label: 'Total', value: stats.total, icon: FileText, color: 'text-gray-700', bg: 'bg-gray-50', filter: 'all' as StatusFilter },
+            { label: 'Draft', value: stats.draft, icon: Clock, color: 'text-amber-700', bg: 'bg-amber-50', filter: 'Draft' as StatusFilter },
+            { label: 'In Review', value: stats.inReview, icon: AlertCircle, color: 'text-blue-700', bg: 'bg-blue-50', filter: 'In Review' as StatusFilter },
+            { label: 'Approved', value: stats.approved, icon: CheckCircle, color: 'text-green-700', bg: 'bg-green-50', filter: 'Approved' as StatusFilter },
+          ].map(({ label, value, icon: Icon, color, bg, filter }) => (
+            <button key={label} onClick={() => setStatusFilter(statusFilter === filter ? 'all' : filter)}
+              className={`${bg} rounded-xl p-4 text-left transition-all border-2 ${statusFilter === filter ? 'border-indigo-400' : 'border-transparent'} hover:border-indigo-300`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-500">{label}</span>
+                <Icon className={`w-4 h-4 ${color}`} />
+              </div>
+              <p className={`text-2xl font-bold mt-1 ${color}`}>{value}</p>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-3 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks…"
+            className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white" />
+          {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>}
+        </div>
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value as TypeFilter)}
+          className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+          <option value="all">All types</option>
+          <option value="Task">Task</option>
+          <option value="Work Instruction">Work Instruction</option>
+        </select>
+        {membership?.app_role !== 'viewer' && (
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as StatusFilter)}
+            className="px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+            <option value="all">All statuses</option>
+            <option value="Draft">Draft</option>
+            <option value="In Review">In Review</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Archived">Archived</option>
+          </select>
+        )}
+      </div>
+
+      {!filtered.length ? (
         <div className="text-center py-24">
           <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Search className="w-6 h-6 text-indigo-400" />
           </div>
-          <h3 className="font-medium text-gray-900 mb-2">No tasks yet</h3>
-          <p className="text-gray-400 text-sm mb-6">
-            Create your first task to get your team started.
-          </p>
-          {canCreate && (
-            <Link
-              href="/create"
-              className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Create your first task
+          <h3 className="font-medium text-gray-900 mb-2">{tasks.length === 0 ? 'No tasks yet' : 'No tasks match your filters'}</h3>
+          <p className="text-gray-400 text-sm mb-6">{tasks.length === 0 ? 'Create your first task to get your team started.' : 'Try adjusting your search or filters.'}</p>
+          {canCreate && tasks.length === 0 && (
+            <Link href="/create" className="inline-flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors">
+              <Plus className="w-4 h-4" />Create your first task
             </Link>
           )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {tasks.map(task => (
-            <TaskCard
-              key={task.id}
-              task={task}
-              canEdit={canCreate}
-            />
-          ))}
+          {filtered.map(task => <TaskCard key={task.id} task={task} canEdit={canCreate} />)}
         </div>
       )}
     </div>
