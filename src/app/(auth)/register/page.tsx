@@ -28,11 +28,23 @@ export default function RegisterPage() {
       options: { data: { full_name: fullName } },
     })
 
-    if (signUpError) { setError(signUpError.message); setLoading(false); return }
+    if (signUpError && !signUpError.message.includes('already registered')) {
+      setError(signUpError.message)
+      setLoading(false)
+      return
+    }
 
-    // Establish a real session immediately (signUp alone may not if email confirm is on)
+    // Establish session immediately after signup
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-    if (signInError) { setError(signInError.message); setLoading(false); return }
+    if (signInError) {
+      if (signInError.message.toLowerCase().includes('confirm') || signInError.message.toLowerCase().includes('email')) {
+        setError('Please check your email and confirm your account before continuing.')
+      } else {
+        setError(signInError.message)
+      }
+      setLoading(false)
+      return
+    }
 
     setLoading(false)
     setStep('company')
@@ -44,7 +56,16 @@ export default function RegisterPage() {
     setLoading(true)
 
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setError('Session lost. Please sign in again.'); setLoading(false); return }
+    let activeUser = user
+    if (!activeUser) {
+      const { data: refreshData } = await supabase.auth.refreshSession()
+      if (!refreshData.user) {
+        setError('Your session expired. Please go back and sign in again.')
+        setLoading(false)
+        return
+      }
+      activeUser = refreshData.user
+    }
 
     const slug = companyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-')
 
@@ -54,20 +75,20 @@ export default function RegisterPage() {
       .select()
       .single()
 
-    if (companyError) { setError(companyError.message); setLoading(false); return }
+    if (companyError) { setError(`Workspace error: ${companyError.message}`); setLoading(false); return }
 
     const { error: memberError } = await supabase
       .from('memberships')
       .insert({
         company_id: company.id,
-        user_id: user.id,
+        user_id: activeUser.id,
         app_role: 'owner',
         active: true,
         user_email: email,
         user_name: fullName,
       })
 
-    if (memberError) { setError(memberError.message); setLoading(false); return }
+    if (memberError) { setError(`Membership error: ${memberError.message}`); setLoading(false); return }
 
     router.push('/library')
     router.refresh()
